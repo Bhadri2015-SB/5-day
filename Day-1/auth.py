@@ -6,6 +6,7 @@ import schemas, crud, utils
 from database import get_db
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from datetime import timedelta
+from exceptions import UserAlreadyExists, InvalidCredentials
 
 router = APIRouter()
 
@@ -33,14 +34,14 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     existing = crud.get_user_by_email(db, user.email)
     if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise UserAlreadyExists()#HTTPException(status_code=400, detail="Email already registered")
     return crud.create_user(db, user)
 
 @router.post("/login", response_model=schemas.Token)
 def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Session = Depends(get_db)):
     user = crud.get_user_by_email(db, form_data.username)
     if not user or not utils.verify_password(form_data.password, user.password):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise InvalidCredentials()#HTTPException(status_code=401, detail="Invalid credentials")
 
     token = utils.create_access_token(
         data={"sub": user.email},
